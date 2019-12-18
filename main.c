@@ -58,16 +58,13 @@ static ssize_t nstat_write(struct file *file, const char __user *buf, size_t cou
 static ssize_t nstat_read(struct file *file, char __user *buf, size_t count, loff_t *pos) 
 {
 	//only whole buffer transfer permitted
-
-	printk("main: read\n");
-
 	if(count < DATA_SZ * sizeof(uint32_t))
 		return -1;
 
-	copy_to_user(buf, ips, DATA_SZ * sizeof(uint32_t));
+	copy_to_user(buf, ips, ips_sz * sizeof(uint32_t));
 	ips_sz = 0;
 
-	return DATA_SZ * sizeof(uint32_t);
+	return ips_sz * sizeof(uint32_t);
 }
 
 static struct file_operations nstat_ops = 
