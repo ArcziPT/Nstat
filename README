@@ -1,0 +1,3 @@
+Linux Kernel Module
+It intercepts network traffic and saves the destination ip addresses, which then can be read by user space program by opening file /proc/nstat (created by module) and reading from it.
+Example: test.py
