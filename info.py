@@ -1,14 +1,9 @@
-'''
-f = open("/proc/nstat", "rb")
-c = f.read(128 * 4)
+import time
 
-for i in range(128):
-    j = 4*i
-    print(str(c[j]) + "." + str(c[j+1]) + "." + str(c[j+2]) + "." + str(c[j+3]))
+freq = 2 #once in 2s read data from nstat file
+ips_num = 256 #number of ips in nstat file
 
-f.close()
-'''
-
+nstat_file = open("/proc/nstat", "rb")
 country_ips_file = open("ip_ranges.csv", "r")
 country_ips = {}
 
@@ -29,11 +24,12 @@ def get_ip_from_oct(oct):
     ip += str(oct[2])
     ip += "."
     ip += str(oct[3])
-    
     return ip
 
-init_country_ips()
 
+#every ip in dict is broadcast ip or routing prefix
+#apply smaller subnets masks until we find country
+#or return unknown
 def get_ip_country(ip):
     oct_s = ip.split('.') #octets of smallest address in subnet
     oct_b = ip.split('.') #octets of broadcats address
@@ -58,12 +54,35 @@ def get_ip_country(ip):
             s_ip = get_ip_from_oct(oct_s)
             b_ip = get_ip_from_oct(oct_b)
 
-            print("s_ip = " + s_ip + "\nb_ip = " + b_ip)
-
             r = s_ip + "," + b_ip
             if(country_ips.__contains__(r)):
                 return country_ips[r]
     return "unknown"
 
 
-print(get_ip_country("8.8.8.8"))
+def read_from_nstat():
+    global nstat_file
+
+    c = nstat_file.read(ips_num * 4)
+    ips = []
+    r = int(len(c)/4)
+    for i in range(r):
+        j = 4*i
+        ip = str(c[j]) + "." + str(c[j+1]) + "." + str(c[j+2]) + "." + str(c[j+3])
+        ips.append(ip)
+
+    return ips
+
+
+def main():
+    init_country_ips()
+
+    while 1:
+        #read data from nstat file and parse it
+        ips = read_from_nstat()
+        for ip in ips:
+            country = get_ip_country(ip)
+            print(ip + " : " + country)
+        time.sleep(freq)
+
+main()

@@ -19,13 +19,13 @@
  */
 
 #define procfs_name "nstat"
-struct proc_dir_entry *nstat_ent;  //info structure of uor file in /proc
+struct proc_dir_entry *nstat_ent;  //info structure of our file in /proc
 
-#define DATA_SZ 128
+#define DATA_SZ 256
 uint32_t* ips = NULL;
 int ips_sz = 0;
 
-static struct nf_hook_ops *hook_ops = NULL; //hook inf ostructure
+static struct nf_hook_ops *hook_ops = NULL; //hook info structure
 
 
 
@@ -45,7 +45,7 @@ static unsigned int hfunc(void *priv, struct sk_buff *skb, const struct nf_hook_
 
 	ips[ips_sz] = dest_ip;
 	ips_sz += 1;
-	
+
 	return NF_ACCEPT;
 }
 
@@ -61,10 +61,14 @@ static ssize_t nstat_read(struct file *file, char __user *buf, size_t count, lof
 	if(count < DATA_SZ * sizeof(uint32_t))
 		return -1;
 
+	if(ips_sz == 0)
+		return 0;
+
 	copy_to_user(buf, ips, ips_sz * sizeof(uint32_t));
+	int read_sz = ips_sz * sizeof(uint32_t);
 	ips_sz = 0;
 
-	return ips_sz * sizeof(uint32_t);
+	return read_sz;
 }
 
 static struct file_operations nstat_ops = 
@@ -87,7 +91,7 @@ static int __init LKM_init(void)
 	
 	// init netfilter hook
 	hook_ops->hook 	= (nf_hookfn*)hfunc;		//function to be called
-	hook_ops->hooknum 	= NF_INET_PRE_ROUTING;		//packets to interupt
+	hook_ops->hooknum 	= NF_INET_POST_ROUTING;		//packets to interupt
 	hook_ops->pf 	= PF_INET;			//ipv4
 	hook_ops->priority 	= NF_IP_PRI_FIRST;		//hook priority
 	
@@ -98,6 +102,7 @@ static void __exit LKM_exit(void)
 {
 	nf_unregister_net_hook(&init_net, hook_ops);
 	kfree(hook_ops);
+	kfree(ips);
 	proc_remove(nstat_ent);
 }
 
